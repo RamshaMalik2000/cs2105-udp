@@ -7,19 +7,22 @@
    1.	Alice
 
 ## Bob
+java Bob <rvcPort>
 ``` Bash
 	java Bob 9001
 ```
 ## UnreliNET
+java UnreliNET <P_DATA_CORRUPT> <P_DATA_LOSS> <P_ACK_CORRUPT> <P_ACK_LOSS> <unreliNetPort> <rcvPort>
 ``` Bash
 	java UnreliNET 0.1 0.1 0.1 0.1 9000 9001
 ```
 ## Alice
+java Alice <path/filename> <unreliNetPort> <rcvFileName>
 ``` Bash
 	java Alice ../test/cs2105.zip 9000 notes.zip
 ```
 
-## Checkpoints
+# Checkpoints
  | Marks | Comment | Status |
  | :---: | :-----: | :----: |
  | 2 pts | Programs compile on **sunfire** without error; program execution follows specified Java commands exactly (see sections below). In addition, submit Java programs only. The files **are not zipped, tarred, or hidden** somewhere in a folder and have the correct (file and class) names. | ✓ |
