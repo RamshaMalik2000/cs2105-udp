@@ -21,6 +21,7 @@ java Alice <path/filename> <unreliNetPort> <rcvFileName>
 ``` Bash
 	java Alice ../test/cs2105.zip 9000 notes.zip
 ```
+---
 
 # Checkpoints
  | Marks | Comment | Status |
