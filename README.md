@@ -12,3 +12,19 @@
  | 1 pt  | Programs can successfully send a (small or large) file from Alice to Bob in the presence of _both packet corruption and packet loss._		    |   |
  | 1 pt  | Programs pass time test (see Section UnreliNET Class). 	|   |
  
+#  Run
+   1.	Bob
+   1.	UnreliNET
+   1.	Alice
+## Bob
+``` Bash
+	java Bob 9001
+```
+## UnreliNET
+``` Bash
+	java UnreliNET 0.1 0.1 0.1 0.1 9000 9001
+```
+## Alice
+``` Bash
+	java Alice ../test/cs2105.zip 9000 notes.zip
+```
