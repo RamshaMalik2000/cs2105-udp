@@ -1,4 +1,4 @@
-# CS2105 
+# CS2105
  In this assignment, a file will be transferred over UDP protocol on top of an unreliable channel that may either corrupt or drop packets randomly (but always deliver packets in order).
 
 #  Running Sequence
@@ -7,17 +7,17 @@
    1.	Alice
 
 ## Bob
-java Bob <rvcPort>
+`java Bob <rvcPort>`
 ``` Bash
 	java Bob 9001
 ```
 ## UnreliNET
-java UnreliNET <P_DATA_CORRUPT> <P_DATA_LOSS> <P_ACK_CORRUPT> <P_ACK_LOSS> <unreliNetPort> <rcvPort>
+`java UnreliNET <P_DATA_CORRUPT> <P_DATA_LOSS> <P_ACK_CORRUPT> <P_ACK_LOSS> <unreliNetPort> <rcvPort>`
 ``` Bash
 	java UnreliNET 0.1 0.1 0.1 0.1 9000 9001
 ```
 ## Alice
-java Alice <path/filename> <unreliNetPort> <rcvFileName>
+`java Alice <path/filename> <unreliNetPort> <rcvFileName>`
 ``` Bash
 	java Alice ../test/cs2105.zip 9000 notes.zip
 ```
@@ -33,4 +33,3 @@ java Alice <path/filename> <unreliNetPort> <rcvFileName>
  | 2 pts | Programs can successfully send a (small or large) file from Alice to Bob in the presence of _data packet lost and ACK/NAK packet loss._		    |   |
  | 1 pt  | Programs can successfully send a (small or large) file from Alice to Bob in the presence of _both packet corruption and packet loss._		    |   |
  | 1 pt  | Programs pass time test (see Section UnreliNET Class). 	|   |
- 
