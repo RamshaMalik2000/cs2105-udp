@@ -1,9 +1,5 @@
 /*
 
-import java.io.UnsupportedEncodingException;
-import java.net.*;
-import java.nio.*;
-import java.util.zip.CRC32;
 Name: HANSEL CHIA
 Student number: A0170121B
 Is this a group submission (yes/no)? NO
@@ -14,7 +10,10 @@ Student number of 2nd group member: THE_OTHER_NO
 
 */
 
-
+import java.io.UnsupportedEncodingException;
+import java.net.*;
+import java.nio.*;
+import java.util.zip.CRC32;
 
 // This class is not absolutely necessary as you can mash everything
 // directly into Alice and Bob classes. However, it might be nicer
@@ -30,8 +29,9 @@ class Packet {
     public final static int CHECKSUM_SIZE = 8;
     public final static int SEQNUM_SIZE = 4;
     public final static int ACK_SIZE = 4;
+    public Type type;
     public enum Type {
-      ACK, DATA, FILENAME
+      ACK, DATA, FILENAME, CORRUPT
     }
 
     // Constructor
@@ -40,11 +40,14 @@ class Packet {
       throws Exception
     {
       this.data = data;
-      if(type == Type.ACK) {
+      this.type = type;
+      if(this.type == Type.ACK) {
         // do nothing - no sequenceNumber
-      } else if(type == Type.DATA) {
+      } else if(this.type == Type.DATA) {
+        // get sequenceNumber for data sequence, case of lost/corrupted packets
         this.sequenceNumber = sequenceNumber;
-      } else if(type == Type.FILENAME) {
+      } else if(this.type == Type.FILENAME) {
+        // computeFileName
         this.fileName = computeFileName(data);
       }
     }
@@ -69,5 +72,18 @@ class Packet {
     // Get data
     public byte[] getData() {
       return data;
+    }
+
+    public boolean isType(Type type) {
+      return (this.type == type);
+    }
+
+    public Packet parsePacket(byte[] data) {
+      // Run CRC checker
+      // if not corrupt
+        // determine type of packet by byte[] length
+      // else
+        // assign CORRUPT type
+      return new Packet();
     }
 }
