@@ -26,10 +26,11 @@ class Packet {
     private byte[] data;
     private int sequenceNumber;
     private String fileName;
+    private Type type;
+    private short typeNumber;
     public final static int CHECKSUM_SIZE = 8;
     public final static int SEQNUM_SIZE = 4;
     public final static int ACK_SIZE = 4;
-    public Type type;
     public enum Type {
       ACK, DATA, FILENAME, CORRUPT
     }
@@ -79,11 +80,23 @@ class Packet {
     }
 
     public Packet parsePacket(byte[] data) {
-      // Run CRC checker
-      // if not corrupt
-        // determine type of packet by byte[] length
+      // Run CRC checker - if not corrupt, remove CRC header
+        // determine type of packet by type[2 bits]
+        // packet - DATA
+          // [crc[8]] [type[2] - 0] [seq[4]] [data[1012]]
+        // packet - FILENAME
+          // [crc[8]] [type[2] - 1] [data[numberOfCharacters]]
+        // packet - ACK
+          // [crc[8]] [type[2] - 2] [data[4]]
       // else
         // assign CORRUPT type
       return new Packet();
     }
+
+    // toBytes
+      // depending on type
+        // add bits to front
+      // append CRC to front
+
+
 }
