@@ -13,6 +13,7 @@ Student number of 2nd group member: THE_OTHER_NO
 import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.nio.*;
+import java.util.Arrays;
 import java.util.zip.CRC32;
 
 // This class is not absolutely necessary as you can mash everything
@@ -29,10 +30,11 @@ class Packet {
     private Type type;
     private short typeNumber;
     public final static int CHECKSUM_SIZE = 8;
+    public final static int TYPE_SIZE = 2;
     public final static int SEQNUM_SIZE = 4;
     public final static int ACK_SIZE = 4;
     public enum Type {
-      ACK, DATA, FILENAME, CORRUPT
+      ACK, DATA, FILENAME, ENDOFFILE, CORRUPT
     }
 
     // Constructor
@@ -60,6 +62,18 @@ class Packet {
     }
 
     // Static CRC checker
+    public static boolean validChecksum(byte[] data) {
+      CRC32 checksum = new CRC32();
+  		checksum.update(data, 8, data.length - 8);
+  		long checksumVal = checksum.getValue();
+  		long oldCheckSum = ByteConversionUtil.byteArrayToLong(
+        Arrays.copyOfRange(data, 0, 8));
+  		if(checksumVal == oldCheckSum) {
+  			return true;
+  		} else {
+  			return false;
+  		}
+    }
 
     // Get file name
     public String getFileName() {
@@ -79,8 +93,10 @@ class Packet {
       return (this.type == type);
     }
 
-    public Packet parsePacket(byte[] data) {
+    public Packet parsePacket(byte[] data) throws Exception {
       // Run CRC checker - if not corrupt, remove CRC header
+      if(validChecksum(data)) {
+
         // determine type of packet by type[2 bits]
         // packet - DATA
           // [crc[8]] [type[2] - 0] [seq[4]] [data[1012]]
@@ -88,15 +104,69 @@ class Packet {
           // [crc[8]] [type[2] - 1] [data[numberOfCharacters]]
         // packet - ACK
           // [crc[8]] [type[2] - 2] [data[4]]
-      // else
-        // assign CORRUPT type
-      return new Packet();
+        return new Packet(); // implement
+      } else {
+        return new Packet(new byte[1], Type.CORRUPT, 0);
+      }
     }
 
-    // toBytes
-      // depending on type
-        // add bits to front
-      // append CRC to front
+    public byte[] toBytes(Packet p) {
+        // depending on type
+        // append CRC to front
+        if(this.isType(Type.ACK)) {
+          // crc8 type2 data4
+        } else
+        if(this.isType(Type.FILENAME)) {
+          // crc8 type2 data_n
+        } else
+        if(this.isType(Type.DATA)) {
+          // crc8 type2 seq4 data1012
+        }
+        if(this.isType(Type.ENDOFFILE)) {
 
+        }
+        return new byte[1]; // implement
+    }
 
+    public static class ByteConversionUtil {
+        private static ByteBuffer longBuffer = ByteBuffer.allocate(Long.BYTES);
+  	    private static ByteBuffer intBuffer = ByteBuffer.allocate(Integer.BYTES);
+        private static ByteBuffer shortBuffer = ByteBuffer.allocate(Short.BYTES);
+
+  		  public static byte[] longToByteArray(long value) {
+            longBuffer.putLong(0, value);
+            return longBuffer.array();
+  		   }
+
+  		  public static long byteArrayToLong(byte[] array) {
+            longBuffer = ByteBuffer.allocate(Long.BYTES);
+            longBuffer.put(array, 0, array.length);
+            longBuffer.flip();
+            return longBuffer.getLong();
+  		  }
+
+    		public static int byteArrayToInt(byte[] array) {
+            intBuffer = ByteBuffer.allocate(Integer.BYTES);
+      			intBuffer.put(array, 0, array.length);
+    			  intBuffer.flip();
+            return intBuffer.getInt();
+    		}
+
+        public static byte[] intToByteArray(int value) {
+            intBuffer.putInt(0, value);
+            return intBuffer.array();
+    		}
+
+        public static short byteArrayToShort(byte[] array) {
+          shortBuffer = ByteBuffer.allocate(Short.BYTES);
+          shortBuffer.put(array, 0, array.length);
+          shortBuffer.flip();
+          return shortBuffer.getShort();
+        }
+
+        public static byte[] shortToByteArray(short value) {
+          shortBuffer.putShort(0, value);
+          return shortBuffer.array();
+        }
+    }
 }
