@@ -1,8 +1,3 @@
-import java.io.*;
-import java.io.FileOutputStream;
-import java.net.*;
-import java.nio.*;
-
 /*
 
 Name: HANSEL CHIA
@@ -15,6 +10,10 @@ Student number of 2nd group member: THE_OTHER_NO
 
 */
 
+import java.io.*;
+import java.io.FileOutputStream;
+import java.net.*;
+import java.nio.*;
 
 class Bob {
     private int seqNum = 0;

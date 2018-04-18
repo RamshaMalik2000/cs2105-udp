@@ -48,7 +48,6 @@ import java.nio.*;
 import java.util.Arrays;
 import java.util.Scanner;
 
-
 class Alice {
     private int seqNum = 0;
     private DatagramSocket socket;
