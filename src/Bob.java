@@ -38,6 +38,7 @@ class Bob {
         DatagramPacket fileData = new DatagramPacket(byteBuffer,
           byteBuffer.length);
         String fileName;
+        boolean isRunning = true;
 
         socket = new DatagramSocket(port);
         socket.receive(fileNameData);
@@ -62,8 +63,9 @@ class Bob {
         FileOutputStream fos = new FileOutputStream(fileName);
         BufferedOutputStream bos = new BufferedOutputStream(fos);
 
-        while(true) {
+        while(isRunning) {
           socket.receive(fileData);
+          byteBuffer = Arrays.copyOfRange(fileData.getData(), 0, fileData.getLength());
           InetAddress serverAddress = fileData.getAddress(); //
 			    int serverPort = fileData.getPort(); //
           System.out.println("Parsing byte");
@@ -75,7 +77,7 @@ class Bob {
               // get seqNum, modify ACK and send
               break;
             case ENDOFFILE:
-              bos.close();
+              isRunning = false;
               // modify ACK and send
               break;
             case CORRUPT:
@@ -84,5 +86,6 @@ class Bob {
             default:
           }
         }
+        bos.close();
     }
 }
