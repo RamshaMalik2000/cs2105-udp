@@ -13,6 +13,7 @@ Student number of 2nd group member: THE_OTHER_NO
 import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.nio.*;
+import java.util.EnumSet;
 import java.util.Arrays;
 import java.util.zip.CRC32;
 
@@ -44,14 +45,26 @@ class Packet {
     {
       this.data = data;
       this.type = type;
-      if(this.type == Type.ACK) {
-        // do nothing - no sequenceNumber
-      } else if(this.type == Type.DATA) {
-        // get sequenceNumber for data sequence, case of lost/corrupted packets
-        this.sequenceNumber = sequenceNumber;
-      } else if(this.type == Type.FILENAME) {
-        // computeFileName
-        this.fileName = computeFileName(data);
+      switch(type) {
+        case ACK:
+          // do nothing - no sequenceNumber
+          break;
+        case DATA:
+          // get sequenceNumber for data sequence, case of lost/corrupted packets
+          this.sequenceNumber = sequenceNumber;
+          System.out.println(sequenceNumber);
+          break;
+        case FILENAME:
+          // computeFileName
+          this.fileName = computeFileName(data);
+          break;
+        case ENDOFFILE:
+          // do nothing
+          break;
+        case CORRUPT:
+          break;
+        default:
+          break;
       }
     }
 
@@ -62,17 +75,50 @@ class Packet {
     }
 
     // Static CRC checker
-    public static boolean validChecksum(byte[] data) {
+    public static boolean validChecksum(byte[] sendData) {
       CRC32 checksum = new CRC32();
-  		checksum.update(data, 8, data.length - 8);
+  		checksum.update(sendData, CHECKSUM_SIZE, sendData.length - CHECKSUM_SIZE);
   		long checksumVal = checksum.getValue();
   		long oldCheckSum = ByteConversionUtil.byteArrayToLong(
-        Arrays.copyOfRange(data, 0, 8));
+        Arrays.copyOfRange(sendData, 0, 8));
   		if(checksumVal == oldCheckSum) {
   			return true;
   		} else {
   			return false;
   		}
+    }
+
+    private static byte[] removeChecksum(byte[] sendData) {
+      return Arrays.copyOfRange(sendData, CHECKSUM_SIZE, sendData.length);
+    }
+
+    private static byte[] removeType(byte[] sendData) {
+      return Arrays.copyOfRange(sendData, TYPE_SIZE, sendData.length);
+    }
+
+    private static byte[] removeSeqNum(byte[] sendData) {
+      return Arrays.copyOfRange(sendData, SEQNUM_SIZE, sendData.length);
+    }
+
+    // Compute type
+    public static Type computeType(byte[] sendData) {
+      short typeNumber = ByteConversionUtil.byteArrayToShort(
+        Arrays.copyOfRange(sendData, CHECKSUM_SIZE, CHECKSUM_SIZE+TYPE_SIZE));
+        int counter = 0;
+        Type result = null;
+        for(Packet.Type t : Packet.Type.values()) {
+          if(counter == (short) typeNumber) {
+            result = t;
+          }
+          counter++;
+        }
+      return result;
+    }
+
+    private static int computeSeqNum(byte[] sendData) {
+      int FIRST_BYTE = CHECKSUM_SIZE + TYPE_SIZE;
+      return ByteConversionUtil.byteArrayToInt(Arrays.copyOfRange(
+        sendData, FIRST_BYTE, FIRST_BYTE + SEQNUM_SIZE));
     }
 
     // Get file name
@@ -89,43 +135,110 @@ class Packet {
       return data;
     }
 
+    // Get type
+    public Type getType() {
+      return type;
+    }
+
     public boolean isType(Type type) {
       return (this.type == type);
     }
 
-    public Packet parsePacket(byte[] data) throws Exception {
+    public static Packet parsePacket(byte[] data) throws Exception {
       // Run CRC checker - if not corrupt, remove CRC header
       if(validChecksum(data)) {
-
         // determine type of packet by type[2 bits]
-        // packet - DATA
-          // [crc[8]] [type[2] - 0] [seq[4]] [data[1012]]
-        // packet - FILENAME
-          // [crc[8]] [type[2] - 1] [data[numberOfCharacters]]
-        // packet - ACK
-          // [crc[8]] [type[2] - 2] [data[4]]
+        Type packetType = computeType(data);
+        switch (packetType) {
+          case DATA:
+            int seqNum = computeSeqNum(data);
+            data = removeSeqNum(removeType(removeChecksum(data)));
+            return new Packet(data, Type.DATA, seqNum);
+          // packet - DATA
+            // [crc[8]] [type[2] - 0] [seq[4]] [data[1012]]
+          // packet - FILENAME
+          case FILENAME:
+            data = removeType(removeChecksum(data));
+            return new Packet(data, Type.FILENAME, 0);
+            // [crc[8]] [type[2] - 1] [data[numberOfCharacters]]
+          // packet - ACK
+            // [crc[8]] [type[2] - 2] [data[4]]
+          default:
+            break;
+        }
         return new Packet(); // implement
       } else {
+        System.out.println("Corrupt packet detected: " + data);
         return new Packet(new byte[1], Type.CORRUPT, 0);
       }
     }
 
-    public byte[] toBytes(Packet p) {
-        // depending on type
-        // append CRC to front
-        if(this.isType(Type.ACK)) {
-          // crc8 type2 data4
-        } else
-        if(this.isType(Type.FILENAME)) {
-          // crc8 type2 data_n
-        } else
-        if(this.isType(Type.DATA)) {
-          // crc8 type2 seq4 data1012
-        }
-        if(this.isType(Type.ENDOFFILE)) {
+    private static byte[] addCheckSum(byte[] sendData) {
+  		CRC32 checksum = new CRC32();
+  		checksum.update(sendData);
+  		long checksumValue = checksum.getValue();
+  		byte[] checksumByteArray = ByteConversionUtil.longToByteArray(checksumValue);
+  		sendData = concatenate(checksumByteArray, sendData);
+      return sendData;
+    }
 
-        }
-        return new byte[1]; // implement
+    private static byte[] addType(byte[] sendData, Type t) {
+      short typeValue = -1;
+      if(t == Type.ACK)
+        typeValue = 0;
+      else
+      if(t == Type.DATA)
+        typeValue = 1;
+      else
+      if(t == Type.FILENAME)
+        typeValue = 2;
+      else
+      if(t == Type.ENDOFFILE)
+        typeValue = 3;
+      byte[] typeBytes = ByteConversionUtil.shortToByteArray(typeValue);
+      sendData = concatenate(typeBytes, sendData);
+      return sendData;
+    }
+
+    private static byte[] addSequenceNumber(byte[] sendData, int index) {
+ 	   	byte[] sequenceNum = ByteConversionUtil.intToByteArray(index);
+ 		  sendData = concatenate(sequenceNum, sendData);
+      return sendData;
+    }
+
+    public static byte[] toBytes(Packet p) {
+      byte[] sendData = p.getData();
+      // depending on type
+      Type packetType = p.getType();
+      switch(packetType) {
+        case ACK:
+          // crc8 type2 data4
+          sendData = addType(sendData, Type.ACK);
+          break;
+        case DATA:
+          // crc8 type2 seq4 data1012
+          sendData = addSequenceNumber(sendData, p.getSequenceNumber());
+          sendData = addType(sendData, Type.DATA);
+          break;
+        case FILENAME:
+          // crc8 type2 data
+          sendData = addType(sendData, Type.FILENAME);
+          break;
+        case ENDOFFILE:
+          sendData = addType(sendData, Type.ENDOFFILE);
+          break;
+        default:
+      }
+      // append CRC to front
+      sendData = addCheckSum(sendData);
+      return sendData;
+    }
+
+    private static byte[] concatenate(byte[] buffer1, byte[] buffer2) {
+        byte[] returnBuffer = new byte[buffer1.length + buffer2.length];
+        System.arraycopy(buffer1, 0, returnBuffer, 0, buffer1.length);
+        System.arraycopy(buffer2, 0, returnBuffer, buffer1.length, buffer2.length);
+        return returnBuffer;
     }
 
     public static class ByteConversionUtil {
@@ -134,27 +247,27 @@ class Packet {
         private static ByteBuffer shortBuffer = ByteBuffer.allocate(Short.BYTES);
 
   		  public static byte[] longToByteArray(long value) {
-            longBuffer.putLong(0, value);
-            return longBuffer.array();
+          longBuffer.putLong(0, value);
+          return longBuffer.array();
   		   }
 
   		  public static long byteArrayToLong(byte[] array) {
-            longBuffer = ByteBuffer.allocate(Long.BYTES);
-            longBuffer.put(array, 0, array.length);
-            longBuffer.flip();
-            return longBuffer.getLong();
+          longBuffer = ByteBuffer.allocate(Long.BYTES);
+          longBuffer.put(array, 0, array.length);
+          longBuffer.flip();
+          return longBuffer.getLong();
   		  }
 
     		public static int byteArrayToInt(byte[] array) {
-            intBuffer = ByteBuffer.allocate(Integer.BYTES);
-      			intBuffer.put(array, 0, array.length);
-    			  intBuffer.flip();
-            return intBuffer.getInt();
+          intBuffer = ByteBuffer.allocate(Integer.BYTES);
+      		intBuffer.put(array, 0, array.length);
+    			intBuffer.flip();
+          return intBuffer.getInt();
     		}
 
         public static byte[] intToByteArray(int value) {
-            intBuffer.putInt(0, value);
-            return intBuffer.array();
+          intBuffer.putInt(0, value);
+          return intBuffer.array();
     		}
 
         public static short byteArrayToShort(byte[] array) {

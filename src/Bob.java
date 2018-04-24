@@ -14,6 +14,7 @@ import java.io.*;
 import java.io.FileOutputStream;
 import java.net.*;
 import java.nio.*;
+import java.util.Arrays;
 
 class Bob {
     private int seqNum = 0;
@@ -31,16 +32,57 @@ class Bob {
     public Bob(int port) throws Exception {
         // Implement me
         byte[] byteBuffer = new byte[1024];
+        byte[] fileBuffer = null;
         DatagramPacket fileNameData = new DatagramPacket(byteBuffer,
+          byteBuffer.length);
+        DatagramPacket fileData = new DatagramPacket(byteBuffer,
           byteBuffer.length);
         String fileName;
 
         socket = new DatagramSocket(port);
         socket.receive(fileNameData);
-        fileName = new String(fileNameData.getData(), 0,
-          fileNameData.getLength() - 0);
+        fileBuffer = Arrays.copyOfRange(fileNameData.getData(), 0, fileNameData.getLength());
+        Packet.Type packetType = Packet.computeType(fileBuffer);
+        if(packetType == Packet.Type.ACK)
+          System.out.println("ACK received");
+        else
+        if(packetType == Packet.Type.DATA)
+          System.out.println("DATA received");
+        else
+        if(packetType == Packet.Type.FILENAME)
+          System.out.println("FILENAME received");
+        else
+        if(packetType == Packet.Type.ENDOFFILE)
+          System.out.println("ENDOFFILE received");
+        else
+          System.out.println("Other type received");
+        fileName = (Packet.parsePacket(fileBuffer)).getFileName();
+        System.out.println("FILENAME = " + fileName);
 
         FileOutputStream fos = new FileOutputStream(fileName);
         BufferedOutputStream bos = new BufferedOutputStream(fos);
+
+        while(true) {
+          socket.receive(fileData);
+          InetAddress serverAddress = fileData.getAddress(); //
+			    int serverPort = fileData.getPort(); //
+          System.out.println("Parsing byte");
+          Packet p = Packet.parsePacket(byteBuffer);
+          System.out.println("Seq num: " + p.getSequenceNumber());
+          switch(p.getType()) {
+            case DATA:
+              bos.write(p.getData(), 0, p.getData().length);
+              // get seqNum, modify ACK and send
+              break;
+            case ENDOFFILE:
+              bos.close();
+              // modify ACK and send
+              break;
+            case CORRUPT:
+              // re-send ACK
+              break;
+            default:
+          }
+        }
     }
 }
