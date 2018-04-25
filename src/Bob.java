@@ -19,6 +19,8 @@ import java.util.Arrays;
 class Bob {
     private int seqNum = 0;
     private DatagramSocket socket;
+    private InetAddress serverAddress;
+    private int serverPort;
 
     public static void main(String[] args) throws Exception {
         // Do not modify this method
@@ -58,34 +60,53 @@ class Bob {
         else
           System.out.println("Other type received");
         fileName = (Packet.parsePacket(fileBuffer)).getFileName();
-        System.out.println("FILENAME = " + fileName);
+        System.out.println("Bob/ FILENAME = " + fileName);
 
         FileOutputStream fos = new FileOutputStream(fileName);
         BufferedOutputStream bos = new BufferedOutputStream(fos);
 
         while(isRunning) {
+          System.out.print("Bob/ File waiting");
           socket.receive(fileData);
+          System.out.println(" + received");
           byteBuffer = Arrays.copyOfRange(fileData.getData(), 0, fileData.getLength());
-          InetAddress serverAddress = fileData.getAddress(); //
-			    int serverPort = fileData.getPort(); //
-          System.out.println("Parsing byte");
+          serverAddress = InetAddress.getByName("localhost"); //
+			    serverPort = port;//fileData.getPort(); //
+          System.out.println("Bob/ Parsing byte");
           Packet p = Packet.parsePacket(byteBuffer);
-          System.out.println("Seq num: " + p.getSequenceNumber());
+          // System.out.println("Bob/ Seq num: " + p.getSequenceNumber());
           switch(p.getType()) {
             case DATA:
               bos.write(p.getData(), 0, p.getData().length);
+              if(p.getSequenceNumber() == seqNum) {
+					      seqNum = (seqNum + 1) % 2;
+				      }
+              sendAck(socket);
               // get seqNum, modify ACK and send
               break;
             case ENDOFFILE:
               isRunning = false;
+              if(p.getSequenceNumber() == seqNum) {
+					      seqNum = (seqNum + 1) % 2;
+				      }
+              sendAck(socket);
               // modify ACK and send
               break;
             case CORRUPT:
+              sendAck(socket);
               // re-send ACK
               break;
             default:
           }
         }
         bos.close();
+    }
+
+    public void sendAck(DatagramSocket socket) throws Exception {
+    	byte[] ackNum = Packet.ByteConversionUtil.intToByteArray(seqNum);
+    	Packet p = new Packet(ackNum, Packet.Type.ACK, 0);
+    	DatagramPacket AckPkt = new DatagramPacket(Packet.toBytes(p), Packet.toBytes(p).length, serverAddress, serverPort);
+      System.out.println("Bob/ Sending ACK: " + seqNum + " to " + "svrAdr: " + serverAddress + ", svrPort: " + serverPort);
+    	socket.send(AckPkt);
     }
 }

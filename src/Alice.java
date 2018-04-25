@@ -76,7 +76,7 @@ class Alice {
       // sendFileName - take Strin filenameAtBob
       if(sendFileName(filenameAtBob))
       // sendFile - take fileToSend
-        System.out.println("sending file!!");
+        System.out.println("Alc/ Sending file!!");
         sendFile(fileToSend);
     }
 
@@ -101,7 +101,7 @@ class Alice {
         byte[] sendData = new byte[BUFFER_SIZE];
 
         while(len > 0) {
-          System.out.println("curr len: " + len);
+          System.out.println("Alc/ File sending");
           if(len >= BUFFER_SIZE) {
             len -= BUFFER_SIZE;
             sendData = new byte[BUFFER_SIZE];
@@ -115,10 +115,11 @@ class Alice {
             dp = new DatagramPacket(Packet.toBytes(p), 0, len + 14, address, port);
             len = 0;
           }
+          System.out.println("Alc/ File sent, len: " + len);
           sendPacket(dp);
         }
 
-        Packet p = new Packet(new byte[1], Packet.Type.ENDOFFILE, 0);
+        Packet p = new Packet(new byte[1], Packet.Type.ENDOFFILE, seqNum + 1);
         dp = new DatagramPacket(Packet.toBytes(p), 0, 11, address, port);
         sendPacket(dp);
       } catch (Exception e) {
@@ -129,17 +130,37 @@ class Alice {
     private void sendPacket(DatagramPacket packet) {
       try {
         socket.send(packet);
-        // while(true) {
-        //   int ackNum = waitAck(socket);
-    		// 	if(ackNum == seqNum) {
-    		// 		socket.send(pkt);
-    		// 	} else {
-    		// 		seqNum = ackNum;
-    		// 		break;
-    		// 	}
-        // }
+        while(true) {
+          int ackNum = waitAck(socket);
+          System.out.println("Alc/ sendPkt ACK: " + ackNum);
+    			if(ackNum == seqNum) {
+    				socket.send(packet);
+    			} else {
+    				seqNum = ackNum;
+    				break;
+    			}
+        }
       } catch (Exception e) {
+        System.out.println("Alc/ ERROR sendPkt: " + e.getMessage());
         sendPacket(packet);
       }
+    }
+
+    public int waitAck(DatagramSocket socket) throws Exception {
+      System.out.print("Alc/ ACK Waiting");
+  		while(true) {
+        System.out.println(" + Looping on address: " + address + ", port: " + port);
+  			byte[] buffer = new byte[Packet.SEQNUM_SIZE + Packet.CHECKSUM_SIZE];
+  			DatagramPacket receivedPkt = new DatagramPacket(buffer, 0, buffer.length, address, port);
+  			// socket.setSoTimeout(100);
+        socket.receive(receivedPkt);
+  			if(receivedPkt != null) {
+  				if(Packet.validChecksum(buffer)) {
+            int ackNum = Packet.ByteConversionUtil.byteArrayToInt(Arrays.copyOfRange(buffer, 10, 14));
+            System.out.println("Alc/ Received ACK: " + ackNum);
+  					return ackNum;
+  				}
+  			}
+  		}
     }
 }

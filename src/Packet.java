@@ -52,7 +52,7 @@ class Packet {
         case DATA:
           // get sequenceNumber for data sequence, case of lost/corrupted packets
           this.sequenceNumber = sequenceNumber;
-          System.out.println(sequenceNumber);
+          System.out.println("Pkt/ DATA seqNum: " + sequenceNumber);
           break;
         case FILENAME:
           // computeFileName
@@ -147,10 +147,14 @@ class Packet {
     public static Packet parsePacket(byte[] data) throws Exception {
       // Run CRC checker - if not corrupt, remove CRC header
       if(validChecksum(data)) {
-        System.out.println("parsePacket data len: " + data.length);
+        System.out.println("Pkt/ parsePacket data len: " + data.length);
         // determine type of packet by type[2 bits]
         Type packetType = computeType(data);
         switch (packetType) {
+          case ACK:
+            data = removeChecksum(data);
+            data = removeType(data);
+            return new Packet(data, Type.ACK, 0);
           case DATA:
             int seqNum = computeSeqNum(data);
             data = removeChecksum(data);
@@ -169,14 +173,14 @@ class Packet {
             // [crc[8]] [type[2] - 2] [data[4]]
           case ENDOFFILE:
             data = removeChecksum(data);
-            System.out.println("ENDOFFILE detected: " + data.length);
+            System.out.println("Pkt/ ENDOFFILE detected: " + data.length);
             return new Packet(data, Type.ENDOFFILE, 0);
           default:
             break;
         }
         return null;
       } else {
-        System.out.println("Corrupt packet detected: " + data.length);
+        System.out.println("Pkt/ Corrupt packet detected: " + data.length);
         return new Packet(new byte[1], Type.CORRUPT, 0);
       }
     }
@@ -239,7 +243,7 @@ class Packet {
       }
       // append CRC to front
       sendData = addCheckSum(sendData);
-      System.out.println("To bytes, data len: " + sendData.length);
+      System.out.println("Pkt/ To bytes, data len: " + sendData.length);
       return sendData;
     }
 
