@@ -48,12 +48,12 @@ import java.nio.*;
 import java.util.Arrays;
 import java.util.Scanner;
 
-
 class Alice {
     private int seqNum = 0;
     private DatagramSocket socket;
     private InetAddress address;
     private int port;
+    private final int BUFFER_SIZE = 1010;
 
     public static void main(String[] args) throws Exception {
         // Do not modify this method
@@ -76,6 +76,7 @@ class Alice {
       // sendFileName - take Strin filenameAtBob
       if(sendFileName(filenameAtBob))
       // sendFile - take fileToSend
+        System.out.println("Alc/ Sending file!!");
         sendFile(fileToSend);
     }
 
@@ -83,13 +84,83 @@ class Alice {
       throws Exception, IOException {
       System.out.println("Sending: " + fileName + "...");
       Packet p = new Packet(fileName.getBytes(), Packet.Type.FILENAME, 0);
-      DatagramPacket dp = new DatagramPacket(p.getData(), 0,
-        p.getData().length, address, port);
+      byte[] toSend = Packet.toBytes(p);
+      DatagramPacket dp = new DatagramPacket(toSend, 0,
+        toSend.length, address, port);
       socket.send(dp);
-      return false;
+      return true;
     }
 
     private void sendFile(String fileName) {
-      return;
+      try {
+        DatagramPacket dp;
+        FileInputStream fis = new FileInputStream(fileName);
+        BufferedInputStream bis = new BufferedInputStream(fis);
+
+        int len = bis.available();
+        byte[] sendData = new byte[BUFFER_SIZE];
+
+        while(len > 0) {
+          System.out.println("Alc/ File sending");
+          if(len >= BUFFER_SIZE) {
+            len -= BUFFER_SIZE;
+            sendData = new byte[BUFFER_SIZE];
+            bis.read(sendData, 0, BUFFER_SIZE);
+            Packet p = new Packet(sendData, Packet.Type.DATA, seqNum);
+            dp = new DatagramPacket(Packet.toBytes(p), 0, BUFFER_SIZE + 14, address, port);
+          } else {
+            sendData = new byte[len];
+            bis.read(sendData, 0, len);
+            Packet p = new Packet(sendData, Packet.Type.DATA, seqNum);
+            dp = new DatagramPacket(Packet.toBytes(p), 0, len + 14, address, port);
+            len = 0;
+          }
+          System.out.println("Alc/ File sent, len: " + len);
+          sendPacket(dp);
+        }
+
+        Packet p = new Packet(new byte[1], Packet.Type.ENDOFFILE, seqNum + 1);
+        dp = new DatagramPacket(Packet.toBytes(p), 0, 11, address, port);
+        sendPacket(dp);
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+    }
+
+    private void sendPacket(DatagramPacket packet) {
+      try {
+        socket.send(packet);
+        while(true) {
+          int ackNum = waitAck(socket);
+          System.out.println("Alc/ sendPkt ACK: " + ackNum);
+    			if(ackNum == seqNum) {
+    				socket.send(packet);
+    			} else {
+    				seqNum = ackNum;
+    				break;
+    			}
+        }
+      } catch (Exception e) {
+        System.out.println("Alc/ ERROR sendPkt: " + e.getMessage());
+        sendPacket(packet);
+      }
+    }
+
+    public int waitAck(DatagramSocket socket) throws Exception {
+      System.out.print("Alc/ ACK Waiting");
+  		while(true) {
+        System.out.println(" + Looping on address: " + address + ", port: " + port);
+  			byte[] buffer = new byte[Packet.SEQNUM_SIZE + Packet.CHECKSUM_SIZE];
+  			DatagramPacket receivedPkt = new DatagramPacket(buffer, 0, buffer.length, address, port);
+  			// socket.setSoTimeout(100);
+        socket.receive(receivedPkt);
+  			if(receivedPkt != null) {
+  				if(Packet.validChecksum(buffer)) {
+            int ackNum = Packet.ByteConversionUtil.byteArrayToInt(Arrays.copyOfRange(buffer, 10, 14));
+            System.out.println("Alc/ Received ACK: " + ackNum);
+  					return ackNum;
+  				}
+  			}
+  		}
     }
 }
