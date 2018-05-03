@@ -152,7 +152,7 @@ class Alice {
         System.out.println(" + Looping on address: " + address + ", port: " + port);
   			byte[] buffer = new byte[Packet.SEQNUM_SIZE + Packet.CHECKSUM_SIZE];
   			DatagramPacket receivedPkt = new DatagramPacket(buffer, 0, buffer.length, address, port);
-  			// socket.setSoTimeout(100);
+  			socket.setSoTimeout(1000);
         socket.receive(receivedPkt);
   			if(receivedPkt != null) {
   				if(Packet.validChecksum(buffer)) {

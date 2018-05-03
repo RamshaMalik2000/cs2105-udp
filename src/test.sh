@@ -12,7 +12,7 @@ java Bob $2 > bobOutput.txt & 2>&1
 sleep 2
 
 echo "Running UnreliNET..."
-java UnreliNET 0.1 0.1 0.1 0.1 $1 $2 > unreliNetOutput.txt & 2>&1
+java UnreliNET 0 0 0 0 $1 $2 > unreliNetOutput.txt & 2>&1
 
 sleep 2
 

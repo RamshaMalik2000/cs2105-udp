@@ -147,9 +147,9 @@ class Packet {
     public static Packet parsePacket(byte[] data) throws Exception {
       // Run CRC checker - if not corrupt, remove CRC header
       if(validChecksum(data)) {
-        System.out.println("Pkt/ parsePacket data len: " + data.length);
         // determine type of packet by type[2 bits]
         Type packetType = computeType(data);
+        System.out.println("Pkt/ parsing packet " + packetType);
         switch (packetType) {
           case ACK:
             data = removeChecksum(data);
